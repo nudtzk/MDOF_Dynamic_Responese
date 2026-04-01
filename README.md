@@ -1,96 +1,238 @@
-# 30-Story MDOF Building Under El Centro Excitation
+# Bending-Shear Coupled MDOF Building Under Earthquake Excitation
 
-This project simulates the lateral dynamic response of a 30-story building under the El Centro NS earthquake record using a bending-shear coupled MDOF model.
+This repository contains a reduced-order structural dynamics workflow for high-rise buildings subjected to earthquake loading. The current implementation uses a bending-shear coupled multi-degree-of-freedom (MDOF) model, solves the base-excited response in the time domain, and generates response plots and animations.
 
-## What the code does
+The project currently supports two main workflows:
 
-- Reads the El Centro acceleration record from `el_centro_ns_1940.txt`
-- Builds a 30-floor lumped-mass model with:
-  - `3.5 m` story height
-  - `64 m x 16 m` tower plan dimensions
-  - coupled shear and bending stiffness contributions
-  - equivalent stiffness calibrated from literature-based first and second modal periods instead of treating the building as a solid concrete cantilever
-- Solves the linear equation of motion under base acceleration
-- Extends the response to `2 x` the earthquake record duration so the free-vibration decay remains visible
-- Exports:
-  - `mdof_el_centro_response.gif`
-  - `max_floor_displacement_envelope.png`
-  - `el_centro_input_extended.png`
-  - `first_five_mode_shapes.png`
-  - `results_summary.md`
+- a default `30`-story benchmark driven by an El Centro acceleration record;
+- a paper-based validation case derived from an open-access MDPI study of a `25`-story building under El Centro excitation.
 
-## Model notes
+## Features
 
-The coupling is represented as:
+- Bending-shear coupled reduced MDOF building model
+- Geometry-based estimation of target modal periods using a literature reference building
+- Time-history response analysis under ground acceleration input
+- Modal output including periods and effective modal mass ratios
+- Response visualization:
+  - animated lateral deformation GIF
+  - floor displacement envelope
+  - mode-shape plots
+  - paper-vs-model benchmark comparison plots
+- PDF-based extraction workflow for open-access benchmark papers
 
-`K_total = K_shear + K_bending`
+## Repository Layout
+
+```text
+airport_runway/
+├── src/                  # Model, solver, benchmark, and path utilities
+├── data/                 # Input earthquake records and downloaded papers
+│   └── papers/           # Benchmark paper files
+├── results/              # Generated plots, reports, and extracted figures
+├── main.py               # Default 30-story benchmark entry point
+└── requirements.txt      # Minimal runtime requirements
+```
+
+Key source files:
+
+- `src/building_model.py`  
+  Reduced bending-shear coupled building model and stiffness calibration logic
+
+- `src/earthquake_data.py`  
+  Earthquake record loading and zero-padding utilities
+
+- `src/solver.py`  
+  Newmark-beta time-history solver for base excitation
+
+- `src/visualization.py`  
+  GIF generation and structural response plotting
+
+- `src/mdpi_benchmark.py`  
+  Paper-based validation case for the extracted MDPI benchmark
+
+- `src/paths.py`  
+  Shared canonical paths for `src/`, `data/`, and `results/`
+
+## Model Formulation
+
+The structural model is a cantilever-type bending-shear coupled MDOF system. Each story contributes translational and rotational inertia, and the stiffness is assembled from Timoshenko-type beam elements.
+
+The governing equation is:
+
+```math
+M \ddot{u} + C \dot{u} + K u = - M r a_g(t)
+```
 
 where:
 
-- `K_shear` comes from inter-story shear springs
-- `K_bending` comes from a discrete curvature-energy bending model
-
-The dynamic equilibrium equation is:
-
-`M u_ddot + C u_dot + K u = -M r a_g(t)`
-
-with:
-
-- `u` as the floor lateral displacement vector
-- `r` as the influence vector of ones
-- `a_g(t)` as the ground acceleration input
+- `M` is the mass matrix
+- `C` is the damping matrix
+- `K` is the lateral stiffness matrix
+- `u` is the floor displacement vector
+- `r` is the influence vector
+- `a_g(t)` is the ground acceleration input
 
 Time integration uses the average-acceleration Newmark-beta method.
 
-## Literature-based calibration
+## Parameter Estimation Strategy
 
-The current version does not estimate stiffness from a full solid rectangular concrete section. Instead, it follows the coupled shear-flexural cantilever concept summarized by Suwansaya and Warnitchai (2023), who note that if the first and second modal periods are known, the effective `EI` and `GA` of the coupled model can be estimated from those periods and their ratio.
+This repository does not model the building as a solid cantilever with a full-section reinforced-concrete `EI`. Instead, it estimates target periods from coarse exterior building parameters and then calibrates equivalent:
 
-For the regular 30-story RC shear-wall building `S1` in the paper (`x` direction), the reported properties include:
+- flexural rigidity `EI`
+- shear rigidity `kGA`
 
-- Tower width `B = 64.0 m`
-- Tower depth `D = 16.0 m`
-- Height `H = 105.0 m`
-- Number of stories `= 30`
-- Typical story height `h = 3.5 m`
+The current reference building is based on:
 
-The reported modal periods are:
+- Suwansaya, P.; Warnitchai, P. (2023), `Buildings`, 13(3), 670
 
-- `T1 = 4.420 s`
-- `T2 = 1.088 s`
-- `T1/T2 = 4.063`
+Reference building values used by the estimator:
 
-This project now uses those `S1` dimensions directly as the default building geometry. The code calibrates the equivalent shear stiffness and flexural rigidity so that the discrete 30-DOF model matches the paper's first and second modal periods.
+- stories: `30`
+- story height: `3.5 m`
+- height: `105 m`
+- plan width: `64 m`
+- plan depth: `16 m`
+- reported modal periods:
+  - `T1 = 4.420 s`
+  - `T2 = 1.088 s`
 
-Reference:
+For the default case, the repository uses the same geometry as the reference building, so the estimated target periods reduce to the published values. For other envelopes, the target periods are scaled from the same reference before stiffness calibration.
 
-- [Suwansaya & Warnitchai (2023), Buildings 13(3), 670](https://www.mdpi.com/2075-5309/13/3/670)
+## Default Benchmark
 
-## Files
+The default benchmark in `main.py` uses:
 
-- `main.py`: entry point
-- `earthquake_data.py`: earthquake record loading and duration extension
-- `building_model.py`: 30-story bending-shear coupled model assembly
-- `solver.py`: MDOF response solver
-- `visualization.py`: GIF and envelope plotting
-- `requirements.txt`: minimal runtime dependencies
+- stories: `30`
+- story height: `3.5 m`
+- plan: `64 m x 16 m`
+- ground motion: El Centro NS record from `data/el_centro_ns_1940.txt`
 
-## Run
+Outputs are written to `results/`:
 
-```bash
-pip install -r requirements.txt
-python main.py
+- `results/mdof_el_centro_response.gif`
+- `results/max_floor_displacement_envelope.png`
+- `results/first_five_mode_shapes.png`
+- `results/el_centro_input_extended.png`
+- `results/results_summary.md`
+
+## MDPI Validation Case
+
+The repository also includes a validation workflow based on:
+
+- `Dynamic Soil Structure Interaction of a High-Rise Building Resting over a Finned Pile Mat`
+- `Infrastructures` 2022, 7(10), 142
+- DOI: `10.3390/infrastructures7100142`
+
+Extracted benchmark properties:
+
+- stories: `25`
+- story height: `3 m`
+- total height: `75 m`
+- plan: `13 m x 13 m`
+- El Centro input from the paper:
+  - `Mw = 6.9`
+  - duration `53.74 s`
+  - `PGA = 0.349 g`
+- paper modal target:
+  - `f1 = 0.547 Hz`
+  - `T1 = 1.827 s`
+- paper response targets:
+  - top-floor peak acceleration `0.25 g`
+  - maximum story drift `0.0084 m`
+  - maximum drift ratio `0.28%`
+
+Generated validation outputs include:
+
+- `results/mdpi_benchmark_results.md`
+- `results/mdpi_benchmark_metrics.png`
+- `results/mdpi_benchmark_errors.png`
+- `results/mdpi_benchmark_envelopes.png`
+- `results/mdpi_story_drift_comparison.png`
+- `results/mdpi_extracted_validation.md`
+
+## Environment
+
+This project has been verified in the following conda environment:
+
+- interpreter: `D:\software\anaconda\envs\nudtzk\python.exe`
+- Python: `3.11.14`
+
+Verified key packages in that environment:
+
+- `numpy 1.26.4`
+- `matplotlib 3.10.8`
+- `pillow 10.4.0`
+- `PyMuPDF 1.26.5`
+
+## Installation
+
+If you want to use the same conda environment directly:
+
+```powershell
+D:\software\anaconda\envs\nudtzk\python.exe -m pip install -r requirements.txt
 ```
 
-## Output meaning
+If you prefer your own environment, install at least:
 
-- The GIF shows the building deformation together with the El Centro time history marker.
-- The envelope plot shows the maximum absolute lateral displacement reached by each floor.
-- The mode-shape plot shows the first five normalized lateral mode shapes and their effective modal mass percentages.
-- The simulation length is twice the original record duration because the second half is zero-padded input, which lets the structural free vibration continue after the earthquake stops.
+- `numpy`
+- `matplotlib`
+- `Pillow`
+- `PyMuPDF`
 
-## Data source
+## Usage
 
-The El Centro acceleration file in this project was downloaded from this public text record:
+Run the default benchmark:
 
-- [El Centro Ground Motion gist](https://gist.github.com/terjehaukaas/60ed4b634d22b14a1bf6a86461d39caf)
+```powershell
+D:\software\anaconda\envs\nudtzk\python.exe main.py
+```
+
+Run the MDPI validation case:
+
+```powershell
+D:\software\anaconda\envs\nudtzk\python.exe src\mdpi_benchmark.py
+```
+
+## Data Sources
+
+- Default El Centro record:
+  - `data/el_centro_ns_1940.txt`
+
+- MDPI benchmark paper:
+  - `data/papers/mdpi_finned_pile_mat_2022.pdf`
+
+- Additional screened paper page:
+  - `data/papers/dual_frame_shear_wall_sciencedirect.html`
+
+## Current Validation Status
+
+The current reduced model performs well on first-mode modal matching for the MDPI benchmark:
+
+- paper `T1 = 1.827 s`
+- model `T1 ≈ 1.859 s`
+
+However, the dynamic response does not yet match the published SSI response closely:
+
+- top-floor peak acceleration is over-predicted
+- inter-story drift is over-predicted
+- story-wise drift shape differs from the paper's `RP-Mat` curve
+
+This is expected because the paper response corresponds to an SSI system with piled-mat and finned-pile-mat foundation behavior, while the current repository models the superstructure only as a reduced bending-shear cantilever.
+
+## Limitations
+
+- The reduced model is currently a superstructure model; it does not explicitly model soil-structure interaction.
+- Paper-response comparisons based on extracted figures are approximate when the original paper does not provide raw numeric tables.
+- The digitized El Centro record used for the MDPI benchmark is reconstructed from the published figure and then rescaled to the reported PGA.
+
+## Next Steps
+
+Recommended next development directions:
+
+- add an equivalent SSI correction model for the MDPI case
+- digitize and compare story-wise acceleration and displacement curves from the paper
+- expose benchmark cases through a single command-line entry point
+- add automated regression checks for modal periods and response metrics
+
+## License
+
+No project license file is currently included in this repository. Add a `LICENSE` file before publishing publicly if you want reuse terms to be explicit.

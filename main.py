@@ -1,19 +1,25 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from building_model import BuildingConfig, build_bending_shear_model
-from earthquake_data import EL_CENTRO_DT, extend_ground_motion, load_el_centro_record
-from solver import solve_linear_response
-from visualization import save_displacement_envelope, save_mode_shapes_plot, save_response_gif
+ROOT = Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.building_model import BuildingConfig, build_bending_shear_model
+from src.earthquake_data import EL_CENTRO_DT, extend_ground_motion, load_el_centro_record
+from src.paths import DATA_DIR, RESULTS_DIR, ensure_project_dirs
+from src.solver import solve_linear_response
+from src.visualization import save_displacement_envelope, save_mode_shapes_plot, save_response_gif
 
 
 def main() -> None:
-    root = Path(__file__).resolve().parent
-    record_path = root / "el_centro_ns_1940.txt"
+    ensure_project_dirs()
+    record_path = DATA_DIR / "el_centro_ns_1940.txt"
 
     record_time_s, ground_accel_g = load_el_centro_record(record_path)
     record_duration_s = record_time_s[-1]
@@ -28,15 +34,15 @@ def main() -> None:
     model = build_bending_shear_model(config)
     response = solve_linear_response(model, time_s, extended_ground_accel_g)
 
-    gif_path = save_response_gif(model, response, root / "mdof_el_centro_response.gif")
+    gif_path = save_response_gif(model, response, RESULTS_DIR / "mdof_el_centro_response.gif")
     envelope_path = save_displacement_envelope(
         model,
         response,
-        root / "max_floor_displacement_envelope.png",
+        RESULTS_DIR / "max_floor_displacement_envelope.png",
     )
-    mode_shapes_path = save_mode_shapes_plot(model, root / "first_five_mode_shapes.png")
-    _save_ground_motion_plot(time_s, extended_ground_accel_g, root / "el_centro_input_extended.png")
-    _write_summary(model, response, root / "results_summary.md")
+    mode_shapes_path = save_mode_shapes_plot(model, RESULTS_DIR / "first_five_mode_shapes.png")
+    _save_ground_motion_plot(time_s, extended_ground_accel_g, RESULTS_DIR / "el_centro_input_extended.png")
+    _write_summary(model, response, RESULTS_DIR / "results_summary.md")
 
     print("Run complete.")
     print(f"Input dt: {EL_CENTRO_DT:.3f} s")
