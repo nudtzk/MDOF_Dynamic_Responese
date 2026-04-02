@@ -1,6 +1,6 @@
 # Bending-Shear Coupled MDOF Building Under Earthquake Excitation
 
-This repository contains a reduced-order structural dynamics workflow for high-rise buildings subjected to earthquake loading. The current implementation uses a bending-shear coupled multi-degree-of-freedom (MDOF) model, solves the base-excited response in the time domain, and generates response plots and animations.
+This repository contains a reduced-order structural dynamics workflow for high-rise buildings subjected to earthquake loading. The implementation uses a bending-shear coupled multi-degree-of-freedom (MDOF) model, solves the base-excited response in the time domain, and generates response plots and animations.
 
 The project currently supports two main workflows:
 
@@ -24,12 +24,12 @@ The project currently supports two main workflows:
 
 ```text
 airport_runway/
-├── src/                  # Model, solver, benchmark, and path utilities
-├── data/                 # Input earthquake records and downloaded papers
-│   └── papers/           # Benchmark paper files
-├── results/              # Generated plots, reports, and extracted figures
-├── main.py               # Default 30-story benchmark entry point
-└── requirements.txt      # Minimal runtime requirements
+|-- src/                  # Model, solver, benchmark, and path utilities
+|-- data/                 # Input earthquake records and downloaded papers
+|   `-- papers/           # Benchmark paper files
+|-- results/              # Generated plots, reports, and extracted figures
+|-- main.py               # Default 30-story benchmark entry point
+`-- requirements.txt      # Minimal runtime requirements
 ```
 
 Key source files:
@@ -208,7 +208,7 @@ D:\software\anaconda\envs\nudtzk\python.exe src\mdpi_benchmark.py
 The current reduced model performs well on first-mode modal matching for the MDPI benchmark:
 
 - paper `T1 = 1.827 s`
-- model `T1 ≈ 1.859 s`
+- model `T1 ~= 1.859 s`
 
 However, the dynamic response does not yet match the published SSI response closely:
 
@@ -224,15 +224,6 @@ This is expected because the paper response corresponds to an SSI system with pi
 - Paper-response comparisons based on extracted figures are approximate when the original paper does not provide raw numeric tables.
 - The digitized El Centro record used for the MDPI benchmark is reconstructed from the published figure and then rescaled to the reported PGA.
 
-## Next Steps
-
-Recommended next development directions:
-
-- add an equivalent SSI correction model for the MDPI case
-- digitize and compare story-wise acceleration and displacement curves from the paper
-- expose benchmark cases through a single command-line entry point
-- add automated regression checks for modal periods and response metrics
-
 ## License
 
-No project license file is currently included in this repository. Add a `LICENSE` file before publishing publicly if you want reuse terms to be explicit.
+This repository is released under the MIT License. See the `LICENSE` file for details.
